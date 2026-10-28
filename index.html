@@ -1,0 +1,410 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tulpan 3D Viewer</title>
+
+  <script async src="https://ga.jspm.io/npm:es-module-shims@2.6.2/dist/es-module-shims.js"></script>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.min.js"
+    }
+  }
+  </script>
+
+  <script type="module"
+    src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.1.0/dist/model-viewer-module.min.js">
+  </script>
+
+  <script type="module"
+    src="https://cdn.jsdelivr.net/npm/@google/model-viewer-effects@1.5.0/dist/model-viewer-effects.min.js">
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 30px 16px;
+      background: #263238;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .viewer-container {
+      width: 100%;
+      overflow: hidden;
+      border: 1px solid #455a64;
+      border-radius: 16px;
+      background: #263238;
+    }
+
+    model-viewer {
+      display: block;
+      width: 100%;
+      height: 480px;
+      background-color: #263238;
+      --poster-color: #263238;
+      --progress-bar-color: #80cbc4;
+      --progress-mask: #263238;
+    }
+
+    .section-title {
+      margin: 26px 0 10px;
+      color: #cfd8dc;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button {
+      padding: 11px 18px;
+      border: 1px solid #546e7a;
+      border-radius: 8px;
+      background: #37474f;
+      color: #ffffff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    button:hover {
+      background: #455a64;
+    }
+
+    button.active {
+      background: #00897b;
+      border-color: #80cbc4;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    #status {
+      min-height: 22px;
+      margin-top: 18px;
+      color: #cfd8dc;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .hint {
+      margin-top: 12px;
+      color: #90a4ae;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 500px) {
+      body {
+        padding: 20px 10px;
+      }
+
+      h1 {
+        font-size: 23px;
+      }
+
+      model-viewer {
+        height: 380px;
+      }
+
+      button {
+        padding: 10px 13px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>3D-модель тюльпана</h1>
+
+    <div class="viewer-container">
+      <model-viewer
+        id="tulpanViewer"
+        src="./Tulpan_Idle.glb"
+        camera-controls
+        auto-rotate
+        rotation-per-second="20deg"
+        shadow-intensity="1"
+        exposure="1"
+        interaction-prompt="none"
+        loading="eager"
+        reveal="auto">
+
+        <effect-composer id="effectComposer" render-mode="quality">
+          <bloom-effect
+            id="bloomEffect"
+            strength="2.5"
+            threshold="0.2"
+            radius="0.8"
+            blend-mode="default">
+          </bloom-effect>
+
+          <outline-effect
+            id="outlineEffect"
+            color="#63ff9b"
+            strength="3"
+            smoothing="1"
+            blend-mode="skip">
+          </outline-effect>
+        </effect-composer>
+
+      </model-viewer>
+    </div>
+
+    <p class="section-title">Выбор анимации</p>
+
+    <div class="controls">
+      <button id="idleButton" class="active" type="button">
+        Idle
+      </button>
+
+      <button id="openButton" type="button">
+        Open
+      </button>
+    </div>
+
+    <p class="section-title">Эффекты постобработки</p>
+
+    <div class="controls">
+      <button id="bloomButton" class="active" type="button">
+        Bloom
+      </button>
+
+      <button id="outlineButton" type="button">
+        Outline
+      </button>
+
+      <button id="bothButton" type="button">
+        Bloom + Outline
+      </button>
+
+      <button id="noEffectButton" type="button">
+        Без эффекта
+      </button>
+    </div>
+
+    <div id="status" role="status" aria-live="polite">
+      Загрузка модели...
+    </div>
+
+    <p class="hint">
+      Модель можно вращать мышью и приближать колёсиком.
+    </p>
+  </main>
+
+  <script>
+    const viewer = document.getElementById("tulpanViewer");
+    const status = document.getElementById("status");
+
+    const idleButton = document.getElementById("idleButton");
+    const openButton = document.getElementById("openButton");
+
+    const bloomButton = document.getElementById("bloomButton");
+    const outlineButton = document.getElementById("outlineButton");
+    const bothButton = document.getElementById("bothButton");
+    const noEffectButton = document.getElementById("noEffectButton");
+
+    const bloom = document.getElementById("bloomEffect");
+    const outline = document.getElementById("outlineEffect");
+
+    const models = {
+      idle: {
+        src: "./Tulpan_Idle.glb",
+        label: "Idle"
+      },
+      open: {
+        src: "./Tulpan_Open.glb",
+        label: "Open"
+      }
+    };
+
+    let currentModel = "idle";
+    let currentEffect = "bloom";
+    let requestNumber = 0;
+
+    // Переключение между GLB-файлами
+    function changeAnimation(name) {
+      if (!models[name]) return;
+
+      currentModel = name;
+      const thisRequest = ++requestNumber;
+
+      idleButton.classList.toggle("active", name === "idle");
+      openButton.classList.toggle("active", name === "open");
+
+      idleButton.disabled = true;
+      openButton.disabled = true;
+
+      status.textContent =
+        "Загрузка модели " + models[name].label + "...";
+
+      viewer.pause();
+      viewer.src = models[name].src;
+      viewer.dataset.requestNumber = String(thisRequest);
+    }
+
+    // Автоматический запуск анимации после загрузки модели
+    viewer.addEventListener("load", () => {
+      const loadedRequest = Number(viewer.dataset.requestNumber);
+
+      if (loadedRequest !== requestNumber) return;
+
+      idleButton.disabled = false;
+      openButton.disabled = false;
+
+      const animations = viewer.availableAnimations || [];
+
+      if (animations.length > 0) {
+        viewer.animationName = animations[0];
+        viewer.currentTime = 0;
+        viewer.play();
+
+        updateStatus();
+      } else {
+        status.textContent =
+          "Модель загружена, но встроенные анимации не найдены.";
+      }
+
+      console.log("Загружена модель:", models[currentModel].src);
+      console.log("Доступные анимации:", animations);
+    });
+
+    viewer.addEventListener("error", () => {
+      idleButton.disabled = false;
+      openButton.disabled = false;
+
+      status.textContent =
+        "Не удалось загрузить модель. Проверьте имя файла и путь к нему.";
+
+      console.error("Ошибка загрузки модели:", viewer.src);
+    });
+
+    // Кнопки выбора модели
+    idleButton.addEventListener("click", () => {
+      changeAnimation("idle");
+    });
+
+    openButton.addEventListener("click", () => {
+      changeAnimation("open");
+    });
+
+    // Обновление подсветки кнопок эффектов
+    function updateEffectButtons() {
+      bloomButton.classList.toggle(
+        "active",
+        currentEffect === "bloom"
+      );
+
+      outlineButton.classList.toggle(
+        "active",
+        currentEffect === "outline"
+      );
+
+      bothButton.classList.toggle(
+        "active",
+        currentEffect === "both"
+      );
+
+      noEffectButton.classList.toggle(
+        "active",
+        currentEffect === "none"
+      );
+    }
+
+    // Включение одного эффекта или обоих одновременно
+    function setEffect(name) {
+      currentEffect = name;
+
+      const bloomEnabled =
+        name === "bloom" || name === "both";
+
+      const outlineEnabled =
+        name === "outline" || name === "both";
+
+      bloom.setAttribute(
+        "blend-mode",
+        bloomEnabled ? "default" : "skip"
+      );
+
+      outline.setAttribute(
+        "blend-mode",
+        outlineEnabled ? "default" : "skip"
+      );
+
+      updateEffectButtons();
+      updateStatus();
+    }
+
+    // Текст статуса
+    function getEffectLabel() {
+      switch (currentEffect) {
+        case "bloom":
+          return "Bloom";
+        case "outline":
+          return "Outline";
+        case "both":
+          return "Bloom + Outline";
+        default:
+          return "без эффекта";
+      }
+    }
+
+    function updateStatus() {
+      status.textContent =
+        "Модель: " + models[currentModel].label +
+        " | Эффект: " + getEffectLabel();
+    }
+
+    // Обработчики кнопок эффектов
+    bloomButton.addEventListener("click", () => {
+      setEffect("bloom");
+    });
+
+    outlineButton.addEventListener("click", () => {
+      setEffect("outline");
+    });
+
+    bothButton.addEventListener("click", () => {
+      setEffect("both");
+    });
+
+    noEffectButton.addEventListener("click", () => {
+      setEffect("none");
+    });
+  </script>
+</body>
+</html>
